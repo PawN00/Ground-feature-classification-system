@@ -26,24 +26,27 @@
 
 ## 项目结构
 
-```text
-Project_Root/
+RUANZHU-WC-V2/
+├── backend/                    # FastAPI 后端工程与深度学习模型
+│   ├── advanced_features.py    # 图像处理扩展（热力图、GeoJSON转换算法）
+│   ├── best_model.pth          # 预训练模型权重文件 (示例)
+│   ├── dataset.py              # 数据集定义与预处理逻辑
+│   ├── EfficientFormer_model.py# EfficientFormer 分割网络结构定义
+│   ├── InferenceEngine.py      # 核心推理引擎组件
+│   ├── login.py                # 路由拆分：鉴权与用户管理
+│   ├── main.py                 # 后端服务主入口与 API 路由
+│   ├── model.py                # 基础模型构建模块
+│   ├── UNet.py                 # UNet++ 网络结构定义
+│   ├── weight.py               # 权重加载与处理辅助模块
+│   └── yolo_model.py           # YOLOv11 分割网络结构定义
 ├── frontend/                   # Vue 3 前端工程
 │   ├── src/
 │   │   ├── app.vue             # 核心视图与交互逻辑
-│   │   └── main.js             # 前端入口
-│   ├── package.json
-│   └── vite.config.js
-├── backend/                    # FastAPI 后端工程
-│   ├── main.py                 # 核心接口与推理逻辑
-│   ├── login.py                # 路由拆分：鉴权与用户管理
-│   ├── advanced_features.py    # 图像处理扩展（热力图、GeoJSON转换）
-│   ├── users.json              # 本地用户数据
-│   ├── yolo_model.py           # YOLOv11 网络定义
-│   ├── EfficientFormer_model.py# EfficientFormer 网络定义
-│   └── UNet.py                 # UNet++ 网络定义
-└── README.md                   # 项目说明文档
-```
+│   │   └── main.js             # 前端入口配置
+│   ├── index.html              # 网页主入口模板
+│   ├── package.json            # 前端依赖配置
+│   └── vite.config.js          # Vite 构建配置
+└── user.json                   # 本地用户数据与权限配置文件
 
 -----
 
