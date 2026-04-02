@@ -1,10 +1,16 @@
+根据你提供的文件结构截图，我为你更新了 README 中的 **项目结构 (Project Structure)** 部分。
+
+我省略了 `__pycache__` 和 `node_modules` 等自动生成的缓存文件夹，让文档看起来更加清晰、专业。这份 README 非常适合直接放入你的项目根目录中。
+
+-----
+
 # 遥感影像地物分割系统 (Remote Sensing Segmentation System)
 
 本项目是一个基于深度学习的遥感影像地物分割 Web 应用。系统支持多光谱（RGB / 4通道）影像的读取与解析，集成了多种图像分割网络，并提供透明度叠加、置信度热力图、面积估算以及 GeoJSON 矢量导出等功能。
 
 ## 核心功能
 
-  * **多模型支持**：后端采用解耦设计，目前已集成 `UNet++ (轻量版)`、`EfficientFormer` 和 `YOLOv11`，支持在前端动态切换推理权重。
+  * **多模型支持**：后端采用解耦设计，目前已集成 `UNet++`、`EfficientFormer` 和 `YOLOv11`，支持在前端动态切换推理权重。
   * **图像可视化分析**：
       * 支持预测掩码（Mask）与原始光学影像按自定义透明度叠加显示。
       * 支持提取模型 Softmax 概率，生成置信度伪彩热力图，用于分析模型预测的不确定性。
@@ -25,7 +31,8 @@
 -----
 
 ## 项目结构
------
+
+```text
 RUANZHU-WC-V2/
 ├── backend/                    # FastAPI 后端工程与深度学习模型
 │   ├── advanced_features.py    # 图像处理扩展（热力图、GeoJSON转换算法）
@@ -47,6 +54,8 @@ RUANZHU-WC-V2/
 │   ├── package.json            # 前端依赖配置
 │   └── vite.config.js          # Vite 构建配置
 └── user.json                   # 本地用户数据与权限配置文件
+```
+
 -----
 
 ## 部署与运行
