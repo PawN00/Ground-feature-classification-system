@@ -1,0 +1,52 @@
+[
+    {
+        "id": 1,
+        "username": "admin",
+        "password": "123456"
+    },
+    {
+        "id": 2,
+        "username": "test_user",
+        "password": "password123"
+    },
+    {
+        "id": 3,
+        "username": "guest",
+        "password": "888"
+    },
+    {
+        "id": 4,
+        "username": "researcher_01",
+        "password": "rs_2026"
+    },
+    {
+        "id": 5,
+        "username": "gis_expert",
+        "password": "map123"
+    },
+    {
+        "id": 6,
+        "username": "student_a",
+        "password": "stu_password"
+    },
+    {
+        "id": 7,
+        "username": "developer",
+        "password": "dev888"
+    },
+    {
+        "id": 8,
+        "username": "demo_account",
+        "password": "demo"
+    },
+    {
+        "id": 9,
+        "username": "auditor",
+        "password": "audit_001"
+    },
+    {
+        "id": 10,
+        "username": "super_admin",
+        "password": "admin888"
+    }
+]
