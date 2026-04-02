@@ -25,7 +25,7 @@
 -----
 
 ## 项目结构
-
+-----
 RUANZHU-WC-V2/
 ├── backend/                    # FastAPI 后端工程与深度学习模型
 │   ├── advanced_features.py    # 图像处理扩展（热力图、GeoJSON转换算法）
@@ -47,7 +47,6 @@ RUANZHU-WC-V2/
 │   ├── package.json            # 前端依赖配置
 │   └── vite.config.js          # Vite 构建配置
 └── user.json                   # 本地用户数据与权限配置文件
-
 -----
 
 ## 部署与运行
