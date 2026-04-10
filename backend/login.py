@@ -3,8 +3,9 @@ import json
 from fastapi import APIRouter, Form, Depends
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
-from fastapi import FastAPI, UploadFile, File, Form, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Remote Sensing API")
 
 app.add_middleware(
@@ -13,6 +14,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # ================= 路由与鉴权配置 =================
 # 创建一个专门处理认证和用户的路由器
 auth_router = APIRouter()
@@ -38,6 +40,10 @@ class UserBase(BaseModel):
     username: str
     password: str
 
+class ResetPassword(BaseModel):
+    username: str
+    new_password: str
+
 # ================= 用户增删改查及登录 API =================
 
 @auth_router.post("/token")
@@ -47,6 +53,29 @@ async def login(username: str = Form(...), password: str = Form(...)):
         if u["username"] == username and u["password"] == password:
             return {"access_token": f"token_for_{username}", "token_type": "bearer"}
     return {"error": "账号或密码错误"}
+
+# [新增] 公开的注册接口（无需鉴权）
+@auth_router.post("/register")
+async def register_user_public(user: UserBase):
+    users = get_all_users()
+    if any(u["username"] == user.username for u in users):
+        return {"success": False, "message": "用户名已存在，请换一个"}
+    
+    new_id = max([u["id"] for u in users], default=0) + 1
+    users.append({"id": new_id, "username": user.username, "password": user.password})
+    save_all_users(users)
+    return {"success": True, "message": "注册成功，请返回登录"}
+
+# [新增] 忘记密码的重置接口（无需鉴权）
+@auth_router.post("/reset_password")
+async def reset_password(data: ResetPassword):
+    users = get_all_users()
+    for i, u in enumerate(users):
+        if u["username"] == data.username:
+            users[i]["password"] = data.new_password
+            save_all_users(users)
+            return {"success": True, "message": "密码重置成功，请使用新密码登录"}
+    return {"success": False, "message": "找不到该用户账号"}
 
 @auth_router.get("/users")
 async def read_users(token: str = Depends(oauth2_scheme)):
