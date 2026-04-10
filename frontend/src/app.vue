@@ -11,13 +11,63 @@
             <el-input v-model="loginForm.username" placeholder="用户名 (admin)" :prefix-icon="User" size="large" />
           </el-form-item>
           <el-form-item>
-            <el-input v-model="loginForm.password" type="password" placeholder="密码 (123456)" :prefix-icon="Lock" size="large" @keyup.enter="handleLogin" />
+            <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" @keyup.enter="handleLogin" />
           </el-form-item>
+          
+          <el-form-item>
+            <div style="display: flex; gap: 10px; width: 100%;">
+              <el-input v-model="loginForm.captcha" placeholder="请输入右侧验证码" size="large" @keyup.enter="handleLogin" />
+              <canvas ref="captchaCanvas" width="110" height="40" @click="drawCaptcha" style="cursor: pointer; border-radius: 4px; border: 1px solid #dcdfe6; background: #fff;" title="点击刷新验证码"></canvas>
+            </div>
+          </el-form-item>
+          
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
+            <el-checkbox v-model="loginForm.rememberMe">记住密码</el-checkbox>
+            <div style="font-size: 14px;">
+              <el-link type="primary" :underline="false" @click="showRegisterDialog = true">注册账号</el-link>
+              <el-divider direction="vertical" />
+              <el-link type="primary" :underline="false" @click="showForgotDialog = true">忘记密码?</el-link>
+            </div>
+          </div>
+
           <el-button type="primary" size="large" style="width: 100%;" :loading="loggingIn" @click="handleLogin">
             安全登录
           </el-button>
         </el-form>
       </div>
+
+      <el-dialog v-model="showRegisterDialog" title="注册新账号" width="400px" append-to-body>
+        <el-form :model="registerForm" label-width="80px">
+          <el-form-item label="用户名">
+            <el-input v-model="registerForm.username" placeholder="请输入您要注册的账号" />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input v-model="registerForm.password" type="password" show-password placeholder="请输入密码" />
+          </el-form-item>
+          <el-form-item label="确认密码">
+            <el-input v-model="registerForm.confirmPassword" type="password" show-password placeholder="请再次输入密码" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="showRegisterDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleRegister">确认注册</el-button>
+        </template>
+      </el-dialog>
+
+      <el-dialog v-model="showForgotDialog" title="重置密码" width="400px" append-to-body>
+        <el-form :model="forgotForm" label-width="80px">
+          <el-form-item label="用户名">
+            <el-input v-model="forgotForm.username" placeholder="请输入已绑定的用户名" />
+          </el-form-item>
+          <el-form-item label="新密码">
+            <el-input v-model="forgotForm.newPassword" type="password" show-password placeholder="请输入新密码" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="showForgotDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleForgot">确认重置</el-button>
+        </template>
+      </el-dialog>
     </div>
 
     <div v-else class="main-dashboard">
@@ -206,7 +256,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import { User, Lock, Picture, Promotion, Folder, ArrowRightBold, Crop, PieChart, Document, Download, DocumentAdd, Monitor, DataAnalysis, MapLocation } from '@element-plus/icons-vue'
@@ -237,7 +287,18 @@ const currentGeoJSON = ref('')
 
 const isLoggedIn = ref(false)
 const loggingIn = ref(false)
-const loginForm = reactive({ username: 'admin', password: '123456' })
+
+// ==== 新增注册、验证码与修改密码相关状态 ====
+const captchaCanvas = ref(null)
+const actualCaptchaCode = ref('')
+
+const loginForm = reactive({ username: '', password: '', captcha: '', rememberMe: false })
+
+const showRegisterDialog = ref(false)
+const registerForm = reactive({ username: '', password: '', confirmPassword: '' })
+
+const showForgotDialog = ref(false)
+const forgotForm = reactive({ username: '', newPassword: '' })
 
 const modelLoaded = ref(false)
 const predicting = ref(false)
@@ -271,7 +332,6 @@ const api = axios.create({ baseURL: 'http://127.0.0.1:8000', timeout: 120000 })
 
 // ==== 计算属性 ====
 
-// 饼图配置 (适配后端新的 stats 格式: {percent: 45.2, pixels: 1234})
 const pieChartOption = computed(() => {
   const data = Object.entries(currentStats.value).map(([name, valObj]) => ({
     name, 
@@ -290,11 +350,9 @@ const pieChartOption = computed(() => {
   }
 })
 
-// 物理面积表格数据
 const areaStatsData = computed(() => {
   if (Object.keys(currentStats.value).length === 0) return []
   return Object.entries(currentStats.value).map(([name, valObj]) => {
-    // 面积 = 像素总数 * (单像素宽 * 单像素高)
     const areaSqM = valObj.pixels * (gsd.value * gsd.value)
     return {
       name,
@@ -302,7 +360,7 @@ const areaStatsData = computed(() => {
       areaSqM: areaSqM.toLocaleString('en-US', { maximumFractionDigits: 1 }),
       areaSqKm: (areaSqM / 1000000).toLocaleString('en-US', { maximumFractionDigits: 4 })
     }
-  }).sort((a, b) => b.percent - a.percent) // 按占比降序排列
+  }).sort((a, b) => b.percent - a.percent)
 })
 
 const topClass = computed(() => {
@@ -331,18 +389,71 @@ const analysisText = computed(() => {
   return text
 })
 
+// ==== 验证码绘制功能 ====
+const drawCaptcha = () => {
+  if (!captchaCanvas.value) return
+  const ctx = captchaCanvas.value.getContext('2d')
+  const width = 110, height = 40
+  ctx.clearRect(0, 0, width, height)
+  
+  const chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678'
+  let code = ''
+  for (let i = 0; i < 4; i++) {
+    const text = chars.charAt(Math.floor(Math.random() * chars.length))
+    code += text
+    ctx.font = 'bold 22px Arial'
+    ctx.fillStyle = '#' + Math.floor(Math.random() * 0x888888).toString(16)
+    ctx.save()
+    ctx.translate(22 * i + 15, 25)
+    ctx.rotate((Math.random() - 0.5) * 0.4)
+    ctx.fillText(text, 0, 0)
+    ctx.restore()
+  }
+  actualCaptchaCode.value = code
+
+  for (let i = 0; i < 5; i++) {
+    ctx.strokeStyle = '#' + Math.floor(Math.random() * 0xcccccc).toString(16)
+    ctx.beginPath()
+    ctx.moveTo(Math.random() * width, Math.random() * height)
+    ctx.lineTo(Math.random() * width, Math.random() * height)
+    ctx.stroke()
+  }
+}
+
+// ==== 初始化逻辑 ====
 onMounted(() => {
   const token = localStorage.getItem('rs_token')
+  
+  // 读取记住的密码
+  const rememberData = localStorage.getItem('rs_remember')
+  if (rememberData) {
+    try {
+      const parsed = JSON.parse(rememberData)
+      loginForm.username = parsed.username
+      loginForm.password = parsed.password
+      loginForm.rememberMe = true
+    } catch (e) {}
+  }
+
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-    const userRole = ref('user') // 记录当前登录用户的角色
-    isLoggedIn.value = false // [已修复] 之前误写成了false
+    isLoggedIn.value = true
     checkModelStatus()
+  } else {
+    // 未登录时，等待 DOM 渲染后绘制验证码
+    nextTick(() => { drawCaptcha() })
   }
 })
 
 // ==== 登录与鉴权 ====
 const handleLogin = async () => {
+  if (!loginForm.captcha || loginForm.captcha.toLowerCase() !== actualCaptchaCode.value.toLowerCase()) {
+    ElMessage.error('验证码错误，请重新输入')
+    drawCaptcha()
+    loginForm.captcha = ''
+    return
+  }
+
   loggingIn.value = true
   try {
     const formData = new FormData()
@@ -354,14 +465,24 @@ const handleLogin = async () => {
       const token = res.data.access_token
       localStorage.setItem('rs_token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      
+      // 处理记住密码
+      if (loginForm.rememberMe) {
+        localStorage.setItem('rs_remember', JSON.stringify({ username: loginForm.username, password: loginForm.password }))
+      } else {
+        localStorage.removeItem('rs_remember')
+      }
+
       isLoggedIn.value = true
       checkModelStatus()
       ElMessage.success('登录成功')
     } else {
       ElMessage.error(res.data.error || '登录失败')
+      drawCaptcha()
     }
   } catch (e) {
     ElMessage.error('登录失败，请检查后端服务')
+    drawCaptcha()
   } finally {
     loggingIn.value = false
   }
@@ -372,6 +493,46 @@ const handleLogout = () => {
   localStorage.removeItem('rs_token')
   resetUploadState()
   api.defaults.headers.common['Authorization'] = ''
+  nextTick(() => { drawCaptcha() })
+}
+
+// ==== 注册逻辑 ====
+const handleRegister = async () => {
+  if (!registerForm.username || !registerForm.password) return ElMessage.warning('账号和密码不能为空')
+  if (registerForm.password !== registerForm.confirmPassword) return ElMessage.warning('两次输入的密码不一致')
+  
+  try {
+    const res = await api.post('/register', { username: registerForm.username, password: registerForm.password })
+    if (res.data.success) {
+      ElMessage.success(res.data.message)
+      showRegisterDialog.value = false
+      loginForm.username = registerForm.username
+      loginForm.password = registerForm.password
+    } else {
+      ElMessage.error(res.data.message)
+    }
+  } catch (e) {
+    ElMessage.error('注册请求失败')
+  }
+}
+
+// ==== 忘记密码逻辑 ====
+const handleForgot = async () => {
+  if (!forgotForm.username || !forgotForm.newPassword) return ElMessage.warning('账号和新密码不能为空')
+  
+  try {
+    const res = await api.post('/reset_password', { username: forgotForm.username, new_password: forgotForm.newPassword })
+    if (res.data.success) {
+      ElMessage.success(res.data.message)
+      showForgotDialog.value = false
+      loginForm.username = forgotForm.username
+      loginForm.password = forgotForm.newPassword
+    } else {
+      ElMessage.error(res.data.message)
+    }
+  } catch (e) {
+    ElMessage.error('重置密码请求失败')
+  }
 }
 
 const checkModelStatus = async () => {
@@ -498,7 +659,6 @@ const executeBatchPredict = async () => {
       if (res.data.first_image) {
         originalImage.value = `data:image/png;base64,${res.data.first_image.preview_base64}`
         resultImage.value = `data:image/png;base64,${res.data.first_image.result_base64}`
-        // 批量结果目前省略了 geojson 和 heatmap，如果需要可同样接入
         currentStats.value = res.data.first_image.stats
         currentShowFilename.value = res.data.first_image.filename
       }
